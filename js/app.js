@@ -101,7 +101,10 @@ var DEFAULT_PARKS = [
   { id: 'j-stjoseph',   name: "St. Joseph's Cemetery",                    lat: 42.01600,  lon: -94.35750, approx: true },
   { id: 'j-daubendiek', name: 'Daubendiek Park (disc golf)',              lat: 41.98557,  lon: -94.39662 },
   { id: 'j-maint',      name: 'Park Maintenance Building (104 N Olive St)', lat: 42.01572, lon: -94.37101 },
-  { id: 'j-community',  name: 'Greene County Community Center (204 W Harrison St)', lat: 42.01481, lon: -94.37697 }
+  { id: 'j-community',  name: 'Greene County Community Center (204 W Harrison St)', lat: 42.01481, lon: -94.37697 },
+  { id: 'j-chautauqua', name: 'Chautauqua Park (503 W Russell St)',   lat: 42.00856,  lon: -94.38077, approx: true },
+  { id: 'j-washington', name: 'Washington Park',                    lat: 42.01703,  lon: -94.38358, approx: true },
+  { id: 'j-russell',    name: 'Russell Park (S Chestnut St)',         lat: 42.01077,  lon: -94.37295, approx: true }
 ];
 /* Facility ids Tanner has had removed after the draft. Pruned from existing
  * installs on load; user-added parks are never touched. Empty for now —
