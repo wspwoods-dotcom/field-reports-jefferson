@@ -84,6 +84,10 @@ var STATUS_LABEL = {
  * Parks & Cemetery Superintendent. Coordinates geocoded to published
  * addresses/park locations; `approx: true` marks ones Eric should verify
  * (notably Head Park, whose geocoder match was unreliable).
+ * 2026-09-21: Tanner had the Daubendiek Park (disc golf) dot removed — it
+ * sits south of the city limits, outside Jefferson. It is pruned from
+ * existing installs by REMOVED_PARK_IDS in Store.load, never silently
+ * dropped by a blanket filter (user-added parks are untouched).
  * Do not treat any entry as authoritative until Eric confirms it. */
 var DEFAULT_PARKS = [
   { id: 'j-kelso',      name: 'Kelso Park (football & soccer fields)',    lat: 42.00831,  lon: -94.38297 },
@@ -93,10 +97,13 @@ var DEFAULT_PARKS = [
   { id: 'j-pool',       name: 'Municipal Swimming Pool (710 S Maple St)', lat: 42.00861,  lon: -94.38026 },
   { id: 'j-cemetery',   name: 'Jefferson Municipal Cemetery (1019 E Lincoln Way)', lat: 42.01528, lon: -94.35879 },
   { id: 'j-stjoseph',   name: "St. Joseph's Cemetery",                    lat: 42.01600,  lon: -94.35750, approx: true },
-  { id: 'j-daubendiek', name: 'Daubendiek Park (disc golf)',              lat: 41.98557,  lon: -94.39662 },
   { id: 'j-maint',      name: 'Park Maintenance Building (104 N Olive St)', lat: 42.01572, lon: -94.37101 },
   { id: 'j-community',  name: 'Greene County Community Center (204 W Harrison St)', lat: 42.01481, lon: -94.37697 }
 ];
+/* Facility ids Tanner had removed after the draft (site outside city
+ * limits). Pruned from existing installs on load; user-added parks are
+ * never touched. */
+var REMOVED_PARK_IDS = ['j-daubendiek'];
 
 /* Rate table. Industry equipment rates: Iowa DOT Living Roadway Trust Fund
  * "Schedule of Labor and Equipment Rates", FY2027 (free, public).
@@ -261,6 +268,20 @@ var Store = {
         }
       });
     }
+    /* 2026-09-21: Tanner had the Daubendiek Park dot removed (outside city
+     * limits). Prune exactly the removed ids from existing installs so the
+     * dot disappears without a data reset. Only REMOVED_PARK_IDS are ever
+     * pruned — parks the user added themselves are untouched. Demo reports
+     * that pointed at a removed park keep their location; only the dangling
+     * park link is cleared. */
+    if (Array.isArray(DB.parks) && DB.parks.some(function (p) { return REMOVED_PARK_IDS.indexOf(p.id) !== -1; })) {
+      DB.parks = DB.parks.filter(function (p) { return REMOVED_PARK_IDS.indexOf(p.id) === -1; });
+    }
+    if (Array.isArray(DB.reports)) {
+      DB.reports.forEach(function (r) {
+        if (r && REMOVED_PARK_IDS.indexOf(r.parkId) !== -1) r.parkId = null;
+      });
+    }
     Store.save();
   },
   /* 2026-09-21: Jefferson pilot is a single-org app. Any saved org that is
@@ -344,13 +365,7 @@ function seedDemo() {
       parkId: 'j-kelso', lat: 42.0083, lon: -94.3830,
       priority: 'low', status: 'fixed', assignee: 'Sam T. (demo crew)',
       createdAt: now - 3 * D,
-      costing: { laborHours: 1.5, equipment: [], materials: 12, closedAt: now - 1 * D } }),
-    mk({ category: 'water', reporter: 'Alex R. (demo crew)',
-      note: 'Culvert cleared after the rain. Water flowing, ditch re-graded with the tractor.',
-      parkId: 'j-daubendiek', lat: 41.9856, lon: -94.3966,
-      priority: 'medium', status: 'verified', assignee: 'Alex R. (demo crew)',
-      dueDate: isoTodayPlus(-1), createdAt: now - 5 * D,
-      costing: { laborHours: 3, equipment: [{ rateId: 'tractor', hours: 1.5 }], materials: 45, closedAt: now - 2 * D } })
+      costing: { laborHours: 1.5, equipment: [], materials: 12, closedAt: now - 1 * D } })
   ];
   DB.parks = JSON.parse(JSON.stringify(DEFAULT_PARKS));
   DB.rates = JSON.parse(JSON.stringify(DEFAULT_RATES));
@@ -664,10 +679,12 @@ function fieldMapBounds(org) {
   return L.latLngBounds([[b.minLat, b.minLon], [b.maxLat, b.maxLon]]);
 }
 
-/* Tanner 2026-09-20: open at the full-county fit (he picked this exact extent
- * on 2026-09-20 from his iPhone screenshot — boundary near the frame edges). */
+/* Tanner 2026-09-21: open with the city limits filling the frame —
+ * he picked this exact extent from his iPhone screenshot (boundary near
+ * the frame edges, very slightly past them). Negative pad contracts the
+ * fit so the limits sit at the edges instead of floating inside them. */
 function frameCounty(org) {
-  frMap.fitBounds(fieldMapBounds(org).pad(0.02));
+  frMap.fitBounds(fieldMapBounds(org).pad(-0.02));
 }
 
 function initFieldMap(org) {
