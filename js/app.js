@@ -104,7 +104,8 @@ var DEFAULT_PARKS = [
   { id: 'j-community',  name: 'Greene County Community Center (204 W Harrison St)', lat: 42.01481, lon: -94.37697 },
   { id: 'j-chautauqua', name: 'Chautauqua Park (503 W Russell St)',   lat: 42.00856,  lon: -94.38077, approx: true },
   { id: 'j-washington', name: 'Washington Park',                    lat: 42.01703,  lon: -94.38358, approx: true },
-  { id: 'j-russell',    name: 'Russell Park (S Chestnut St)',         lat: 42.01077,  lon: -94.37295, approx: true }
+  { id: 'j-russell',    name: 'Russell Park (S Chestnut St)',         lat: 42.01077,  lon: -94.37295, approx: true },
+  { id: 'j-watertower', name: 'Water tower park (N Walnut St & W Central St)', lat: 42.02606, lon: -94.38250, approx: true }
 ];
 /* Facility ids Tanner has had removed after the draft. Pruned from existing
  * installs on load; user-added parks are never touched. Empty for now —
