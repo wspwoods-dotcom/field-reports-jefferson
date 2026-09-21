@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141810">
+<title>Field Reports — City of Jefferson</title>
+<meta name="description" content="Fast field maintenance reports for City of Jefferson (Iowa) parks & cemetery staff. Prototype: everything stays on this phone.">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./assets/icon-192.png">
+<link rel="apple-touch-icon" href="./assets/icon-192.png">
+<link rel="stylesheet" href="./css/styles.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+
+<div id="demo-banner" class="demo-banner" hidden>
+  DEMO — fictional data for trying the app. Nothing here is real. Reset anytime in More.
+</div>
+
+<header class="app-header">
+  <div class="app-title">
+    <img class="app-logo" src="assets/jefferson-city-logo.png" alt="City of Jefferson logo">
+    <div>
+      <h1>Field Reports</h1>
+      <p class="subtitle" id="org-subtitle">City of Jefferson · prototype</p>
+    </div>
+  </div>
+  <div id="sync-pill" class="sync-pill" title="Prototype: reports stay on this phone. A shared backend arrives in Phase 2.">📴 <span id="sync-count">0</span> on this phone</div>
+  <button id="sos-btn" class="sos-btn" hidden aria-label="Emergency call">SOS</button>
+</header>
+
+<main id="main">
+
+  <!-- REPORT -->
+  <section id="view-report" class="view">
+    <p class="view-lede">See something? Tap it, snap it, say it, send it. Thirty seconds, one hand.</p>
+    <div id="category-grid" class="category-grid"></div>
+    <p class="hint">No signal? No problem — reports save on this phone and will sync when the shared backend is added.</p>
+  </section>
+
+  <!-- BOARD -->
+  <section id="view-board" class="view" hidden>
+    <div class="filter-bar">
+      <select id="f-park" aria-label="Filter by park"></select>
+      <select id="f-priority" aria-label="Filter by priority">
+        <option value="">All priorities</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+        <option value="none">Not set</option>
+      </select>
+      <select id="f-status" aria-label="Filter by status">
+        <option value="">All statuses</option>
+        <option value="reported">Reported</option>
+        <option value="triaged">Triaged</option>
+        <option value="assigned">Assigned</option>
+        <option value="fixed">Fixed</option>
+        <option value="verified">Verified closed</option>
+      </select>
+      <select id="f-sort" aria-label="Sort">
+        <option value="newest">Newest first</option>
+        <option value="priority">Priority first</option>
+        <option value="due">Due date</option>
+      </select>
+    </div>
+    <div id="board-list" class="board-list"></div>
+  </section>
+
+  <!-- MAP -->
+  <section id="view-map" class="view" hidden>
+    <p class="view-lede">Where the work is — City of Jefferson parks & cemetery areas and report dots.</p>
+    <div id="pin-hint">Tap the map to drop the pin.</div>
+    <div id="place-bar"><span>Drag the pin onto the exact spot.</span><button id="btn-place-ok" class="btn primary" type="button">Looks right</button><button id="btn-place-cancel" class="btn ghost" type="button" aria-label="Cancel pin">✕</button></div>
+    <div class="map-wrap">
+      <div id="map-holder" class="map-holder"></div>
+      <div class="map-ctl">
+        <button id="map-pin" type="button" aria-label="Drop a pin">📍</button>
+        <button id="map-locate" type="button" aria-label="Find me">◎</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SAVINGS -->
+  <section id="view-savings" class="view" hidden>
+    <p class="view-lede">What the crew's work is worth — industry rates vs. in-house cost.</p>
+    <div class="filter-bar">
+      <select id="s-park" aria-label="Filter by park"></select>
+      <input type="date" id="s-from" aria-label="From date">
+      <input type="date" id="s-to" aria-label="To date">
+    </div>
+    <div class="stat-cards">
+      <div class="stat-card"><span class="stat-label">Industry value</span><span class="stat-value" id="stat-industry">$0</span></div>
+      <div class="stat-card"><span class="stat-label">In-house cost</span><span class="stat-value" id="stat-inhouse">$0</span></div>
+      <div class="stat-card highlight"><span class="stat-label">County savings</span><span class="stat-value" id="stat-savings">$0</span></div>
+    </div>
+    <p class="hint">Valued per the Iowa DOT Living Roadway Trust Fund methodology: industry labor at published wage data plus fringe, equipment at published hourly rates. Edit rates in More → Rate table; set your crew's real wages in More → Crew wages.</p>
+    <div id="savings-crew"></div>
+    <div id="savings-list" class="board-list"></div>
+    <div class="btn-row">
+      <button id="btn-csv" class="btn">⬇ Jobs CSV</button>
+      <button id="btn-json" class="btn">⬇ All data (JSON)</button>
+    </div>
+  </section>
+
+  <!-- INCIDENT -->
+  <section id="view-incident" class="view" hidden>
+    <p class="view-lede">Storm or disaster mode — tag reports to an incident and log every cost against it.</p>
+    <div id="incident-body"></div>
+  </section>
+
+  <!-- MORE -->
+  <section id="view-more" class="view" hidden>
+    <h2>Your name</h2>
+    <div class="card">
+      <label class="field-label" for="staff-name">Shown as reporter on your reports</label>
+      <input type="text" id="staff-name" placeholder="e.g. Tanner" autocomplete="off">
+    </div>
+
+    <h2>Parks &amp; areas <span class="count-badge" id="park-count"></span></h2>
+    <div class="card">
+      <div id="park-list" class="park-list"></div>
+      <div class="add-row">
+        <input type="text" id="new-park-name" placeholder="New area name" autocomplete="off">
+        <input type="number" id="new-park-lat" placeholder="Lat (optional)" step="any">
+        <input type="number" id="new-park-lon" placeholder="Lon (optional)" step="any">
+        <button id="btn-add-park" class="btn small">Add</button>
+      </div>
+      <p class="hint">A few more areas are coming — add them here any time. Coordinates are optional; adding them improves the GPS park suggestion.</p>
+    </div>
+
+    <h2>Rate table</h2>
+    <div class="card">
+      <p class="hint">Industry rates seed from Iowa DOT's published FY2027 equipment schedule. In-house rates are your real loaded costs — edit them to match your books.</p>
+      <div id="rate-list"></div>
+      <div class="add-row">
+        <input type="text" id="new-rate-label" placeholder="Equipment name" autocomplete="off">
+        <input type="number" id="new-rate-ind" placeholder="$/hr industry" step="any" min="0">
+        <input type="number" id="new-rate-in" placeholder="$/hr in-house" step="any" min="0">
+        <button id="btn-add-rate" class="btn small">Add</button>
+      </div>
+    </div>
+
+    <h2>Crew wages (admin)</h2>
+    <div class="card">
+      <p class="hint">One row per person — set each staffer's loaded hourly cost, the amount the county actually pays per hour of their time. The costing sheet then splits labor hours per person, and Savings shows the true in-house cost plus each person's total. This prototype has no logins, so anyone holding this phone can open this screen.</p>
+      <div id="crew-list"></div>
+      <div class="add-row">
+        <input type="text" id="new-crew-name" placeholder="Name" autocomplete="off">
+        <input type="number" id="new-crew-wage" placeholder="$/hr loaded cost" step="any" min="0">
+        <button id="btn-add-crew" class="btn small">Add</button>
+      </div>
+    </div>
+
+    <h2>Issue categories</h2>
+    <div class="card">
+      <p class="hint">Turn off the issue types your crew doesn't file — they disappear from the Report tab. Old reports stay put wherever they are.</p>
+      <div id="cat-toggle-list"></div>
+      <div class="btn-row">
+        <button id="btn-cats-enable-all" class="btn small">Enable all</button>
+      </div>
+    </div>
+
+    <h2>Data</h2>
+    <div class="card">
+      <div class="btn-row">
+        <button id="btn-reset-demo" class="btn">↺ Reset demo data</button>
+        <button id="btn-wipe" class="btn danger">🗑 Erase everything</button>
+      </div>
+      <p class="hint">Erase everything removes all reports, photos, and settings from this phone. There is no cloud copy in this prototype.</p>
+    </div>
+
+    <h2>About this prototype</h2>
+    <div class="card">
+      <p><strong>Field Reports</strong> is a working prototype for the City of Jefferson's parks & cemetery maintenance reporting.</p>
+      <ul class="about-list">
+        <li>📴 <strong>Everything stays on this phone.</strong> There is no backend, no account, and no syncing in this prototype — that arrives in Phase 2.</li>
+        <li>📶 It works fully offline, including in dead zones. Reports save locally the moment you hit send.</li>
+        <li>🧾 Closed jobs log labor, equipment, and materials so the Savings view can show industry value vs. in-house cost.</li>
+        <li>🗺️ The park list comes from mycountyparks.com and is editable above.</li>
+      </ul>
+      <p class="hint">Prototype build 2026-09-20p1 · localStorage only · no analytics.</p>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar" aria-label="Main">
+  <button class="tab active" data-view="view-map"><span class="tab-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></span><span>Map</span></button>
+  <button class="tab" data-view="view-report"><span class="tab-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span><span>Report</span></button>
+  <button class="tab" data-view="view-board"><span class="tab-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7 5h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm2-2.5h6a1 1 0 0 1 1 1V6H8V3.5a1 1 0 0 1 1-1zM8 10h8v1.8H8V10zm0 3.6h8v1.8H8v-1.8zm0 3.6h5v1.8H8v-1.8z"/></svg></span><span>Board</span></button>
+  <button class="tab" data-view="view-savings"><span class="tab-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="9"/><text x="12" y="16.9" text-anchor="middle" font-size="12.5" font-weight="800" fill="#10140c">$</text></svg></span><span>Savings</span></button>
+  <button class="tab" data-view="view-incident"><span class="tab-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.8L22.6 21H1.4L12 2.8z"/><rect x="11.1" y="8.6" width="1.8" height="6" rx="0.9" fill="#10140c"/><circle cx="12" cy="17.3" r="1.2" fill="#10140c"/></svg></span><span>Incident</span></button>
+  <button class="tab" data-view="view-more"><span class="tab-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6.2"/><rect x="10.9" y="1.6" width="2.2" height="4.6" rx="1"/><rect x="10.9" y="1.6" width="2.2" height="4.6" rx="1" transform="rotate(45 12 12)"/><rect x="10.9" y="1.6" width="2.2" height="4.6" rx="1" transform="rotate(90 12 12)"/><rect x="10.9" y="1.6" width="2.2" height="4.6" rx="1" transform="rotate(135 12 12)"/><rect x="10.9" y="1.6" width="2.2" height="4.6" rx="1" transform="rotate(180 12 12)"/><rect x="10.9" y="1.6" width="2.2" height="4.6" rx="1" transform="rotate(225 12 12)"/><rect x="10.9" y="1.6" width="2.2" height="4.6" rx="1" transform="rotate(270 12 12)"/><rect x="10.9" y="1.6" width="2.2" height="4.6" rx="1" transform="rotate(315 12 12)"/><circle cx="12" cy="12" r="2.6" fill="#10140c"/></svg></span><span>More</span></button>
+</nav>
+
+<!-- REPORT SHEET -->
+<div id="sheet-report" class="sheet-backdrop" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sr-title">
+    <div class="sheet-handle"></div>
+    <h2 id="sr-title">New report</h2>
+
+    <label class="field-label" for="sr-park">Park / area</label>
+    <select id="sr-park"></select>
+    <p id="sr-park-hint" class="hint" hidden></p>
+
+    <div class="gps-row">
+      <span id="sr-gps-status" class="gps-status">📍 Locating…</span>
+      <span id="sr-gps-coords" class="gps-coords"></span>
+    </div>
+
+    <label class="field-label">Photo</label>
+    <div class="photo-row">
+      <button id="sr-photo-btn" class="btn">📷 Snap a photo</button>
+      <img id="sr-photo-preview" class="photo-preview" alt="" hidden>
+    </div>
+    <input type="file" id="sr-photo-input" class="hidden-file" accept="image/*">
+
+    <label class="field-label" for="sr-notes">Notes</label>
+    <div class="notes-row">
+      <textarea id="sr-notes" rows="3" placeholder="What needs doing?"></textarea>
+      <button id="sr-mic" class="btn mic" aria-label="Dictate notes">🎤</button>
+    </div>
+    <p id="sr-mic-status" class="hint" hidden></p>
+
+    <div id="sr-tools-wrap" hidden>
+      <label class="field-label">Tools to bring</label>
+      <div id="sr-tools" class="tool-chips"></div>
+      <p class="hint">Tap what you're taking so nobody forgets it at the shop.</p>
+    </div>
+
+    <label class="field-label">Priority <span class="req">*</span></label>
+    <div class="sr-pri-row" id="sr-pri-row" role="radiogroup" aria-label="Priority">
+      <button type="button" class="sr-pri-btn" data-pri="low"><span class="dot"></span>Low</button>
+      <button type="button" class="sr-pri-btn" data-pri="medium"><span class="dot"></span>Medium</button>
+      <button type="button" class="sr-pri-btn" data-pri="high"><span class="dot"></span>High</button>
+    </div>
+
+    <div class="btn-row">
+      <button id="sr-cancel" class="btn ghost">Cancel</button>
+      <button id="sr-send" class="btn primary">Send report</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL SHEET -->
+<div id="sheet-detail" class="sheet-backdrop" hidden>
+  <div class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-handle"></div>
+    <div id="detail-body"></div>
+    <div class="btn-row">
+      <button id="detail-close" class="btn ghost">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./js/orgs.js"></script>
+<script src="./js/orgmap.js"></script>
+<script src="./js/trail.js"></script>
+<script src="./js/app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
