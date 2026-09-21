@@ -86,6 +86,9 @@ var STATUS_LABEL = {
  * (notably Head Park, whose geocoder match was unreliable).
  * 2026-09-21: Tanner first had the Daubendiek Park (disc golf) dot removed,
  * then reversed it ("you wanna keep Daubendiek") — it is restored below.
+ * 2026-09-21: Tanner corrected St. Joseph's Cemetery to the land north of
+ * the water tower park (was wrongly placed east of town) and added the
+ * Jefferson Municipal Airport (EFW, 1581 235th St), which Eric's crew mows.
  * REMOVED_PARK_IDS in Store.load prunes removed ids from existing installs
  * (user-added parks are never touched), and any DEFAULT_PARKS entry missing
  * from an install is re-added — so removals and restorations both propagate
@@ -98,14 +101,15 @@ var DEFAULT_PARKS = [
   { id: 'j-complex',    name: 'City Complex (softball/baseball, 901 E Lincoln Way)', lat: 42.01516, lon: -94.36482 },
   { id: 'j-pool',       name: 'Municipal Swimming Pool (710 S Maple St)', lat: 42.00861,  lon: -94.38026 },
   { id: 'j-cemetery',   name: 'Jefferson Municipal Cemetery (1019 E Lincoln Way)', lat: 42.01528, lon: -94.35879 },
-  { id: 'j-stjoseph',   name: "St. Joseph's Cemetery",                    lat: 42.01600,  lon: -94.35750, approx: true },
+  { id: 'j-stjoseph',   name: "St. Joseph's Cemetery (N Walnut St, north of water tower)", lat: 42.02890, lon: -94.38190, approx: true },
   { id: 'j-daubendiek', name: 'Daubendiek Park (disc golf)',              lat: 41.98557,  lon: -94.39662 },
   { id: 'j-maint',      name: 'Park Maintenance Building (104 N Olive St)', lat: 42.01572, lon: -94.37101 },
   { id: 'j-community',  name: 'Greene County Community Center (204 W Harrison St)', lat: 42.01481, lon: -94.37697 },
   { id: 'j-chautauqua', name: 'Chautauqua Park (503 W Russell St)',   lat: 42.00856,  lon: -94.38077, approx: true },
   { id: 'j-washington', name: 'Washington Park',                    lat: 42.01703,  lon: -94.38358, approx: true },
   { id: 'j-russell',    name: 'Russell Park (S Chestnut St)',         lat: 42.01077,  lon: -94.37295, approx: true },
-  { id: 'j-watertower', name: 'Water tower park (N Walnut St & W Central St)', lat: 42.02606, lon: -94.38250, approx: true }
+  { id: 'j-watertower', name: 'Water tower park (N Walnut St & W Central St)', lat: 42.02606, lon: -94.38250, approx: true },
+  { id: 'j-airport',    name: 'Jefferson Municipal Airport (1581 235th St, EFW)', lat: 42.00983, lon: -94.34181 }
 ];
 /* Facility ids Tanner has had removed after the draft. Pruned from existing
  * installs on load; user-added parks are never touched. Empty for now —
@@ -705,9 +709,19 @@ function fieldMapBounds(org) {
 /* Tanner 2026-09-21: open with the city limits filling the frame —
  * he picked this exact extent from his iPhone screenshot (boundary near
  * the frame edges, very slightly past them). Negative pad contracts the
- * fit so the limits sit at the edges instead of floating inside them. */
+ * fit so the limits sit at the edges instead of floating inside them.
+ * 2026-09-21: also extend the frame to the airport pin (j-airport, east of
+ * town, outside the city limits) so it is on screen at open. Extends from
+ * DEFAULT_PARKS so the frame follows the data if the pin moves. */
 function frameCounty(org) {
-  frMap.fitBounds(fieldMapBounds(org).pad(-0.02));
+  var b = fieldMapBounds(org);
+  for (var i = 0; i < DEFAULT_PARKS.length; i++) {
+    if (DEFAULT_PARKS[i].id === 'j-airport') {
+      b.extend([DEFAULT_PARKS[i].lat, DEFAULT_PARKS[i].lon]);
+      break;
+    }
+  }
+  frMap.fitBounds(b.pad(-0.02));
 }
 
 function initFieldMap(org) {
